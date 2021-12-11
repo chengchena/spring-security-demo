@@ -1,5 +1,6 @@
-package com.chengchen.rememberme1.config;
+package com.chengchen.remembermepersistent.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -7,9 +8,22 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+
+import javax.sql.DataSource;
 
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    DataSource dataSource;
+
+    @Bean
+    JdbcTokenRepositoryImpl jdbcTokenRepository() {
+        JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
+        jdbcTokenRepository.setDataSource(dataSource);
+        return jdbcTokenRepository;
+    }
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -24,20 +38,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .roles("admin");
     }
 
-   /* @Override
-    public void configure(WebSecurity web) throws Exception {
-        super.configure(web);
-    }*/
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
+                //必须是remeberme才能访问
+                .antMatchers("/rememberme").rememberMe()
+                //必须是用户用户名和密码登陆才能访问
+                .antMatchers("/admin").fullyAuthenticated()
                 .anyRequest().authenticated()
                 .and()
                 .formLogin()
                 .and()
                 .rememberMe()
-                .key("1qaz2wsx") // key不设置的话，默认使用，当服务重启时，之前的rememberMe的cookie将不起作用
+                .key("chencheng")
+                .tokenRepository(jdbcTokenRepository())
                 .and()
                 .csrf().disable();
     }
